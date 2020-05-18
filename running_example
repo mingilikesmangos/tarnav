@@ -1,0 +1,3 @@
+python -u -m torch.distributed.launch --use_env --nproc_per_node 1 train_baseline.py --exp-config configs/ddppo_objectnav.yaml --run-type train
+python -u -m torch.distributed.launch --use_env --nproc_per_node 1 train_baseline.py --exp-config configs/ddppo_vistargetnav.yaml --run-type train
+

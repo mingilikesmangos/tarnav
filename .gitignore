@@ -1,0 +1,7 @@
+checkpoints-*/
+logs/
+videos/
+ckpts/
+exp-ckpts_*/
+exp-logs/
+ckpts_*/
