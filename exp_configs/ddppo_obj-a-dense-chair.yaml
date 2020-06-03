@@ -5,13 +5,13 @@ ENV_NAME: "CustomObjectNavRLEnv"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk", "tensorboard"]
-TENSORBOARD_DIR: "exp-logs/obj_b/dense-em"
-VIDEO_DIR: "videos/obj_b/dense-em"
+TENSORBOARD_DIR: "exp-logs/obj_b/dense-chair"
+VIDEO_DIR: "videos/obj_b/dense-chair"
 TEST_EPISODE_COUNT: 1000
 EVAL_CKPT_PATH_DIR: "exp-ckpts_b"
 NUM_PROCESSES: 4
 SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
-CHECKPOINT_FOLDER: "exp-ckpts_b/dense-em"
+CHECKPOINT_FOLDER: "exp-ckpts_b/dense-chair"
 NUM_UPDATES: 100000000
 LOG_INTERVAL: 10
 CHECKPOINT_INTERVAL: 1000

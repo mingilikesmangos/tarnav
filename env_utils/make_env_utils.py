@@ -21,7 +21,8 @@ def filter_fn(episode):
     #if episode.info['geodesic_distance'] < 6.5 and episode.info['geodesic_distance'] > 4.0:
     #if episode.info['geodesic_distance'] < 10.0 and episode.info['geodesic_distance'] > 6.5:
     if episode.info['geodesic_distance'] < 10.0 and episode.info['geodesic_distance'] > 1.5:
-        if episode.object_category in ['bed', 'chair', 'stool', 'table', 'cabinet', 'tv_monitor']:
+        #if episode.object_category in ['bed', 'chair', 'stool', 'table', 'cabinet', 'tv_monitor']:
+        if episode.object_category in ['chair']:
             return True
 
     else : return False
@@ -120,7 +121,7 @@ def construct_envs(
     scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
     if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
         scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
-        scenes = scenes[:16]
+        scenes = scenes[:32]
     if num_processes > 1:
         if len(scenes) == 0:
             raise RuntimeError(

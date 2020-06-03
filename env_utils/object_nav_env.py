@@ -150,7 +150,138 @@ class CustomObjectNavEnv(habitat.RLEnv):
             cv2.waitKey(1)
             return img
         return super().render(mode)
+    
+@baseline_registry.register_env(name="CustomObjectNavRLEnv-val")
+class CustomObjectNavEnvVal(habitat.RLEnv):
+    metadata = {'render.modes': ['rgb_array']}
+    def __init__(self, config: Config, dataset: Optional[Dataset] = None):
+        self._rl_config = config.RL
+        self._core_env_config = config.TASK_CONFIG
+        self._reward_measure_name = self._rl_config.REWARD_MEASURE
+        self._success_measure_name = self._rl_config.SUCCESS_MEASURE
+        self.stuck = 0
+        self.progress = 0
+        self.closest = 50
+        self._previous_measure = None
+        self._previous_action = None
+        self.time_t = 0
+        super().__init__(self._core_env_config, dataset)
+        self.observation_space = SpaceDict(
+            {
+                'panoramic_rgb': self.habitat_env._task.sensor_suite.observation_spaces.spaces['panoramic_rgb'],
+                'panoramic_depth': self.habitat_env._task.sensor_suite.observation_spaces.spaces['panoramic_depth'],
+                'objectgoal': self.habitat_env._task.sensor_suite.observation_spaces.spaces['objectgoal']
+            }
+        )
 
+    def reset(self):
+        self._previous_action = None
+        self.time_t = 0
+        self.stuck = 0
+        self.progress = 0
+        self.closest = 50
+        observations = super().reset()
+        self._previous_measure = self._env.get_metrics()[
+            self._reward_measure_name
+        ]
+        self.obs = observations
+        self.info = None
+        self.total_reward = 0
+        return self.process_obs(observations)
+
+    def process_obs(self, obs):
+        return {'panoramic_rgb': obs['panoramic_rgb'],
+                'panoramic_depth': obs['panoramic_depth'],
+                'objectgoal': obs['objectgoal']}
+    def step(self, action):
+        #action['action'] += 1
+        self._previous_action = action
+        
+        obs, reward, done, self.info = super().step(action)
+        
+        self.time_t += 1
+        self.info['length'] = self.time_t * done
+        #print(self.info)
+        #print(self.habitat_env.sim.previous_step_collided)
+        #print("agent state : {0}, {1} #####################".format(
+        #    self.habitat_env.sim.get_agent_state().position,
+        #    self.habitat_env.sim.get_agent_state().rotation)
+        #)
+        self.obs = obs
+        self.total_reward += reward
+        return self.process_obs(obs), reward, done, self.info
+
+    def get_reward_range(self):
+        return (
+            self._rl_config.SLACK_REWARD - 1.0,
+            self._rl_config.SUCCESS_REWARD + 1.0,
+        )
+
+    def get_reward(self, observations):
+        reward_type = self._rl_config.REWARD_SHAPE
+        
+        reward = self._rl_config.SLACK_REWARD
+
+        current_measure = self._env.get_metrics()[self._reward_measure_name]
+
+        self.progress =  self._previous_measure - current_measure
+        
+        if reward_type == "dense":
+            reward += self.progress*(self._rl_config.REWARD_RATIO)
+           
+        if reward_type == "dist":
+            dist = self.habitat_env.get_metrics()['distance_to_goal']
+            if dist < self.closest:
+                covered = self.closest - dist
+                self.closest = dist
+                if covered <10:
+                    reward += covered*(self._rl_config.REWARD_RATIO)
+        
+
+        if abs(self.progress) < 0.01:
+            self.stuck += 1
+        else:
+            self.stuck = 0
+
+        self._previous_measure = current_measure
+
+        if self._episode_success():
+            reward = self._rl_config.SUCCESS_REWARD
+
+        return reward
+
+    def _episode_success(self):
+        return self._env.get_metrics()[self._success_measure_name]
+
+    def get_done(self, observations):
+        done = False
+        #if self.stuck > 40:
+        #    done = True
+
+        if self._env.episode_over or self._episode_success():
+            done = True
+        return done
+
+    def get_info(self, observations):
+        return self.habitat_env.get_metrics()
+
+    def render(self, mode='rgb'):
+        info = self.get_info(None) if self.info is None else self.info
+        img = observations_to_image(self.obs, info, mode='panoramic')
+        str_action = ''
+        if self._previous_action is not None:
+            action_list = ["STOP", "MOVE_FORWARD", 'TURN_LEFT', 'TURN_RIGHT']
+            str_action = action_list[self._previous_action['action']]
+        dist = self.habitat_env.get_metrics()['distance_to_goal']
+        category = self.current_episode.object_category
+        img = append_text_to_image(img, 't: %03d, r: %f a: %s, dist: %.2f cat: %s'%(self.time_t,self.total_reward, str_action, dist, category))
+        if mode == 'rgb' or mode == 'rgb_array':
+            return img
+        elif mode == 'human':
+            cv2.imshow('render', img)
+            cv2.waitKey(1)
+            return img
+        return super().render(mode)
 
 if __name__ == '__main__':
     def filter_fn(episode):

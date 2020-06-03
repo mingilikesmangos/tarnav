@@ -1,6 +1,6 @@
 from env_utils.object_nav_task import CustomObjectGoalSensor
 from env_utils.object_nav_dataset import CustomObjectNavDatasetV1
-from env_utils.object_nav_env import CustomObjectNavEnv
+from env_utils.object_nav_env import CustomObjectNavEnv, CustomObjectNavEnvVal
 
 from env_utils.vistarget_nav_task import CustomVisTargetSensor
 from env_utils.vistarget_nav_dataset import VisTargetNavDatasetV1

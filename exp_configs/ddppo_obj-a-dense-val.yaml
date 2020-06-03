@@ -1,7 +1,7 @@
 GPU_ID: 0
-BASE_TASK_CONFIG_PATH: "exp_configs/obj_mp3d.yaml"
+BASE_TASK_CONFIG_PATH: "exp_configs/obj_mp3d-val.yaml"
 TRAINER_NAME: "custom_ddppo"
-ENV_NAME: "CustomObjectNavRLEnv"
+ENV_NAME: "CustomObjectNavRLEnv-val"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk", "tensorboard"]
