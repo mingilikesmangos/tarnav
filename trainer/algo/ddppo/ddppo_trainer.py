@@ -87,6 +87,7 @@ class DDPPOTrainer(PPOTrainer):
             goal_sensor_uuid=self.config.TASK_CONFIG.TASK.GOAL_SENSOR_UUID,
             normalize_visual_inputs="rgb"
             in self.envs.observation_spaces[0].spaces,
+            use_pretrained_resnet=self.config.RL.DDPPO.use_pretrained_resnet,
         )
         self.actor_critic.to(self.device)
 
