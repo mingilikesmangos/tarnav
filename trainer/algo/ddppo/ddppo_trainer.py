@@ -88,6 +88,8 @@ class DDPPOTrainer(PPOTrainer):
             normalize_visual_inputs="rgb"
             in self.envs.observation_spaces[0].spaces,
             use_pretrained_resnet=self.config.RL.DDPPO.use_pretrained_resnet,
+            use_midlevel_reps=self.config.RL.DDPPO.use_midlevel_reps,
+            midreps_size = self.config.RL.DDPPO.midreps_size,
         )
         self.actor_critic.to(self.device)
 

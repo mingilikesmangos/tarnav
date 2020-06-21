@@ -3,6 +3,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import visualpriors
 
 import numpy as np
 import torch
@@ -33,6 +34,8 @@ class PointNavResNetPolicy(Policy):
         backbone="resnet50",
         normalize_visual_inputs=False,
         use_pretrained_resnet=False,
+        use_midlevel_reps=False,
+        midreps_size = 2,
     ):
         super().__init__(
             PointNavResNetNet(
@@ -46,6 +49,8 @@ class PointNavResNetPolicy(Policy):
                 resnet_baseplanes=resnet_baseplanes,
                 normalize_visual_inputs=normalize_visual_inputs,
                 use_pretrained_resnet=use_pretrained_resnet,
+                use_midlevel_reps=use_midlevel_reps,
+                midreps_size = midreps_size,
             ),
             action_space.n,
         )
@@ -205,6 +210,28 @@ class PretrainedResnetEncoder(nn.Module):
         x = self.resnet_(input)
         
         return x
+
+class MidRepEncoder(nn.Module):
+    def __init__(
+        self,
+        midreps_size,
+    ):
+        super().__init__()
+        if midreps_size == 2:
+            self.reps = ['segment_unsup2d', 'segment_unsup25d']
+            self.size = 2
+        elif midreps_size == 3:
+            self.reps = ['segment_unsup2d', 'segment_unsup25d']
+            self.size = 3
+        elif midreps_size == 1:
+            self.reps = ['autoencoding']
+            self.size = 1
+    
+    def forward(self, input):
+        x = visualpriors.multi_representation_transform(input, self.reps)
+        x = x.view(x.shape[0],self.size,-1)
+        return x
+        
     
 import time
 TIME_DEBUG = True
@@ -229,6 +256,8 @@ class PointNavResNetNet(Net):
         resnet_baseplanes,
         normalize_visual_inputs,
         use_pretrained_resnet,
+        use_midlevel_reps,
+        midreps_size,
     ):
         super().__init__()
         self.goal_sensor_uuid = goal_sensor_uuid
@@ -257,6 +286,11 @@ class PointNavResNetNet(Net):
                 normalize_visual_inputs=normalize_visual_inputs,
             )
             
+        self.use_midlevel_reps = False
+        if use_midlevel_reps:
+            self.midreps_encoder = MidRepEncoder(midreps_size)
+            self.use_midlevel_reps = True
+            
         if not self.visual_encoder.is_blind:
             if use_pretrained_resnet:
                 self.visual_fc = nn.Sequential(
@@ -266,12 +300,24 @@ class PointNavResNetNet(Net):
                     nn.ReLU(True),
                 )
             else:
-                self.visual_fc = nn.Sequential(
-                    nn.Linear(
-                        np.prod(self.visual_encoder.output_shape)*2, hidden_size
-                    ),
-                    nn.ReLU(True),
-                )
+                if use_midlevel_reps:
+                    self.visual_fc = nn.Sequential(
+                        nn.Linear(
+                            np.prod(self.visual_encoder.output_shape)*(2+midreps_size), hidden_size*2
+                        ),
+                        nn.Linear(
+                            hidden_size*2, hidden_size
+                        ),
+                        nn.ReLU(True),
+                    )
+                else:
+                    self.visual_fc = nn.Sequential(
+                        nn.Linear(
+                            np.prod(self.visual_encoder.output_shape)*2, hidden_size
+                        ),
+                        nn.ReLU(True),
+                    )
+                
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self._hidden_size) + rnn_input_size,
@@ -307,15 +353,24 @@ class PointNavResNetNet(Net):
         goal_obs = observations['objectgoal'].permute(0,3,1,2)
         #goal_obs = observations['target_goal'].permute(0,3,1,2)
         batched_obs = torch.cat([curr_obs, goal_obs[:,:4]],0)
-
+        
         feats = self.visual_encoder(batched_obs)
         curr_feats, target_feats = feats.split(B)
-
+        
+        if self.use_midlevel_reps:
+            batched_rgb = torch.cat([curr_obs[:,:3], goal_obs[:,:3]],0)
+            midrep_feats = self.midreps_encoder(batched_rgb)
+            cur_mid_f, tar_mid_f = midrep_feats.split(B)
+            feats = torch.cat((curr_feats.view(B,-1),cur_mid_f.view(B,-1),target_feats.view(B,-1),tar_mid_f.view(B,-1)),1)     
+        else:
+            feats = torch.cat((curr_feats.view(B,-1),target_feats.view(B,-1)),1)
+            
         #tgt_encoding = self.get_tgt_encoding(goal_obs[:,-1])
         prev_actions = self.prev_action_embedding(
             ((prev_actions.float() + 1) * masks).long().squeeze(-1)
         )
-        feats = self.visual_fc(torch.cat((curr_feats.view(B,-1),target_feats.view(B,-1)),1))
+        
+        feats = self.visual_fc(feats)
         x = [feats, prev_actions]
 
         x = torch.cat(x, dim=1)
