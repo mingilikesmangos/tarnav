@@ -22,8 +22,8 @@ def filter_fn(episode):
     #if episode.info['geodesic_distance'] < 10.0 and episode.info['geodesic_distance'] > 7:
     #if episode.info['geodesic_distance'] < 10.0 and episode.info['geodesic_distance'] > 1.5:
         #if episode.object_category in ['bed', 'chair', 'stool', 'table', 'cabinet', 'tv_monitor']:
-        #if episode.object_category in ['chair']:
-        if episode.object_category in ['table']:
+        if episode.object_category in ['chair']:
+        #if episode.object_category in ['table']:
         #if episode.object_category in ['picture', 'window']:
             return True
 

@@ -82,7 +82,6 @@ def observations_to_image(observation: Dict, info: Dict, mode='plain') -> np.nda
     egocentric_view = []
     if "rgb" in observation and mode != 'panoramic':
         observation_size = observation["rgb"].shape[0]
-        rgb = observation["rgb"]
         if not isinstance(rgb, np.ndarray):
             rgb = rgb.cpu().numpy()
 
@@ -92,16 +91,29 @@ def observations_to_image(observation: Dict, info: Dict, mode='plain') -> np.nda
         rgb = observation["panoramic_rgb"]
         if not isinstance(rgb, np.ndarray):
             rgb = rgb.cpu().numpy()
-
         egocentric_view.append(rgb)
-
+    '''
+    if "2d" in observation:
+        d2 = observation["2d"]
+        if not isinstance(d2, np.ndarray):
+            d2 = d2.cpu().numpy()
+        print("d2 : {0}".format(d2.shape))
+        egocentric_view.append(d2)
+        
+    if "25d" in observation:
+        d25 = observation["25d"]
+        if not isinstance(d25, np.ndarray):
+            d25 = d25.cpu().numpy()
+        print("d25 : {0}".format(d25.shape))
+        egocentric_view.append(d25)
+    '''
     if "objectgoal" in observation:
         goal_rgb = (observation['objectgoal'][:,:,:3]*255).astype(np.uint8)
         egocentric_view.append(goal_rgb)
     if "target_goal" in observation:
         goal_rgb = (observation['target_goal'][:,:,:3]*255).astype(np.uint8)
         egocentric_view.append(goal_rgb)
-
+    
     if mode == 'panoramic':
         egocentric_view = np.concatenate(egocentric_view, axis=0)
     else:

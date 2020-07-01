@@ -3,7 +3,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+import visualpriors
 import os
 import time
 from collections import defaultdict, deque
@@ -541,7 +541,7 @@ class PPOTrainer(BaseRLTrainer):
                 list(x) for x in zip(*outputs)
             ]
             batch = batch_obs(observations, device=self.device)
-
+            
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
                 dtype=torch.float,

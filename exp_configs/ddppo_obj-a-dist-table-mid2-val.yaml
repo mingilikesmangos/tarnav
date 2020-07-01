@@ -4,7 +4,7 @@ TRAINER_NAME: "custom_ddppo"
 ENV_NAME: "CustomObjectNavRLEnv-val"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
-VIDEO_OPTION: []
+VIDEO_OPTION: ["tensorboard", "disk"]
 TENSORBOARD_DIR: "eval-logs/dist-table-mid2/tb"
 VIDEO_DIR: "eval-logs/dist-table-mid2/videos"
 TEST_EPISODE_COUNT: 50

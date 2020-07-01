@@ -3,7 +3,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+import visualpriors
 import contextlib
 import os
 import random
@@ -569,6 +569,18 @@ class DDPPOTrainer(PPOTrainer):
                 list(x) for x in zip(*outputs)
             ]
             batch = batch_obs(observations, device=self.device)
+            if self.config.RL.DDPPO.use_midlevel_reps:
+                if self.config.RL.DDPPO.midreps_size == 1:
+                    for obs in observations:
+                        print(obs['panoramic_rgb'].shape)
+                        obs["auto"] = visualpriors.feature_readout(obs['panoramic_rgb'].reshape(3,256,128)/255.0, 'autoencoding', device=self.device)
+                else:
+                    for obs in observations:
+                        inp = torch.tensor(obs['panoramic_rgb'], dtype=torch.float, device=self.device)
+                        inp = inp.view(1,3,128,256)
+                        obs["2d"] = visualpriors.feature_readout(inp, 'segment_unsup2d', device=self.device)
+                        obs["25d"] = visualpriors.feature_readout(inp, 'segment_unsup25d', device=self.device)
+
 
             not_done_masks = torch.tensor(
                 [[0.0] if done else [1.0] for done in dones],
